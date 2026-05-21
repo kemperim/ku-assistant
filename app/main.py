@@ -1,0 +1,95 @@
+import os
+import logging
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from contextlib import asynccontextmanager
+
+from .rag_engine import RAGEngine
+from .config import settings
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
+rag_engine: RAGEngine = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global rag_engine
+    logger.info("Initializing RAG engine...")
+    rag_engine = RAGEngine()
+    await rag_engine.initialize()
+    logger.info("RAG engine ready.")
+    yield
+    logger.info("Shutting down...")
+
+
+app = FastAPI(
+    title="Abitur RAG Agent",
+    description="ИИ-агент для ответов на вопросы абитуриентов",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.mount("/static", StaticFiles(directory="/app/static"), name="static")
+
+
+class QuestionRequest(BaseModel):
+    question: str
+    top_k: int = 5
+
+
+class QuestionResponse(BaseModel):
+    answer: str
+    sources: list[dict]
+    question: str
+
+
+class SyncRequest(BaseModel):
+    force: bool = False
+
+
+@app.get("/")
+async def root():
+    return FileResponse("/app/static/index.html")
+
+
+@app.post("/ask", response_model=QuestionResponse)
+async def ask_question(req: QuestionRequest):
+    if not rag_engine:
+        raise HTTPException(status_code=503, detail="RAG engine not initialized")
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+    try:
+        result = await rag_engine.answer(req.question.strip(), top_k=req.top_k)
+        return result
+    except Exception as e:
+        logger.error(f"Error answering question: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/sync")
+async def sync_documents(req: SyncRequest):
+    """Download docs from Google Drive and re-index"""
+    if not rag_engine:
+        raise HTTPException(status_code=503, detail="RAG engine not initialized")
+    try:
+        result = await rag_engine.sync_documents(force=req.force)
+        return result
+    except Exception as e:
+        logger.error(f"Error syncing documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/status")
+async def status():
+    if not rag_engine:
+        return {"status": "initializing", "docs_count": 0, "chunks_count": 0}
+    return await rag_engine.get_status()
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

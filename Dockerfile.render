@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Системные зависимости + curl + ollama installer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpoppler-cpp-dev poppler-utils curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установить Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Python зависимости
+COPY requirements.txt .
+RUN pip install --no-cache-dir packaging && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Код приложения
+COPY app/ ./app/
+COPY static/ ./static/
+COPY cli.py ./cli.py
+COPY start.sh ./start.sh
+RUN chmod +x start.sh
+
+RUN mkdir -p /data/docs /data/vectorstore
+
+EXPOSE 8000
+
+CMD ["./start.sh"]
