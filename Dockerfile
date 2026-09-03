@@ -15,9 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY static/ ./static/
 COPY tools/ ./tools/
+COPY scripts/ ./scripts/
 
 # Data dirs (will be mounted as volumes)
-RUN mkdir -p /data/docs /data/vectorstore
+RUN mkdir -p /data/docs /data/vectorstore /data/raw_ku_site
 
 EXPOSE 8000
 

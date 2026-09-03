@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Приёмная комиссия — ИИ-помощник</title>
+<title>KU Assistant</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -390,8 +390,8 @@
     <div class="logo">
       <div class="logo-icon">🎓</div>
       <div>
-        <div class="logo-text">Приёмная комиссия</div>
-        <div class="logo-sub">ИИ-помощник абитуриента</div>
+        <div class="logo-text">KU Assistant</div>
+        <div class="logo-sub">проект для абитуриентов KU</div>
       </div>
     </div>
     <!-- Только переключатель темы -->
@@ -405,14 +405,14 @@
 <main>
   <div id="welcome" class="welcome">
     <div class="welcome-icon">🎓</div>
-    <h1>Задайте вопрос<br><span>приёмной комиссии</span></h1>
-    <p>Я отвечу на ваши вопросы о поступлении, специальностях, документах и условиях зачисления на основе официальных документов университета.</p>
+    <h1>Задайте вопрос<br><span>о Kozybayev University</span></h1>
+    <p>Я помогу найти информацию о поступлении, программах, стоимости обучения, общежитиях, стипендиях и контактах университета.</p>
     <div class="suggestions">
-      <button class="suggestion-btn" onclick="ask(this.textContent)">Какие документы нужны для поступления?</button>
-      <button class="suggestion-btn" onclick="ask(this.textContent)">Когда начинается приём документов?</button>
-      <button class="suggestion-btn" onclick="ask(this.textContent)">Какие специальности есть на бюджет?</button>
-      <button class="suggestion-btn" onclick="ask(this.textContent)">Минимальный балл ЕНТ для поступления?</button>
-      <button class="suggestion-btn" onclick="ask(this.textContent)">Стоимость обучения на платном?</button>
+      <button class="suggestion-btn" onclick="ask(this.textContent)">Сколько факультетов в университете?</button>
+      <button class="suggestion-btn" onclick="ask(this.textContent)">Какая стоимость обучения на Информационные системы?</button>
+      <button class="suggestion-btn" onclick="ask(this.textContent)">Где находится приёмная комиссия?</button>
+      <button class="suggestion-btn" onclick="ask(this.textContent)">Какие стипендии указаны для студентов?</button>
+      <button class="suggestion-btn" onclick="ask(this.textContent)">Какие образовательные программы есть?</button>
       <button class="suggestion-btn" onclick="ask(this.textContent)">Есть ли общежитие для иногородних?</button>
     </div>
   </div>
@@ -444,8 +444,8 @@
   <div class="modal">
     <div class="about-hero">
       <div class="about-hero-icon">🤖</div>
-      <h2>ИИ-помощник абитуриента</h2>
-      <p>Учебный проект — интеллектуальная система<br>вопросов и ответов на основе документов<br>приёмной комиссии университета</p>
+      <h2>KU Assistant</h2>
+      <p>Наименование проекта: <strong>KU Assistant</strong><br>интеллектуальная система вопросов и ответов<br>по официальной информации Kozybayev University</p>
     </div>
     <hr class="about-divider">
 
@@ -453,7 +453,7 @@
       <div class="about-section-title">Принцип работы (RAG)</div>
       <div class="about-row">
         <span class="about-row-icon">📄</span>
-        <div class="about-row-text">Документы загружаются из <strong>Google Drive</strong> (PDF, DOCX) и разбиваются на смысловые фрагменты</div>
+        <div class="about-row-text">Документы хранятся <strong>локально в проекте</strong>; при необходимости их можно синхронизировать из <strong>Google Drive</strong></div>
       </div>
       <div class="about-row">
         <span class="about-row-icon">🔍</span>
@@ -470,8 +470,8 @@
       <div class="about-row">
         <span class="about-row-icon">⚡</span>
         <div class="about-row-text">
-          <span class="badge blue">Groq API</span><span class="badge blue">LLaMA 3.3 70B</span>
-          <br>Языковая модель для генерации ответов
+          <span class="badge blue">Groq API</span><span class="badge blue">любая Groq-модель</span>
+          <br>Модель для генерации ответов выбирается в файле .env
         </div>
       </div>
       <div class="about-row">
@@ -492,7 +492,7 @@
 
     <hr class="about-divider">
    <div class="about-footer">
-      Учебный проект · <strong>RAG (Retrieval-Augmented Generation)</strong><br>
+      Проект <strong>KU Assistant</strong> · RAG (Retrieval-Augmented Generation)<br>
       Ответы формируются <strong>только</strong> на основе загруженных официальных документов.<br>
       Система не придумывает факты — если информации нет, она об этом скажет.
     </div>
@@ -516,6 +516,7 @@
 
 <script>
 let isLoading = false;
+const chatHistory = [];
 
 /* ── Theme ── */
 function toggleTheme() {
@@ -562,11 +563,23 @@ async function sendQuestion() {
     const res = await fetch('/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, top_k: 5 })
+      body: JSON.stringify({
+        question,
+        top_k: 8,
+        history: chatHistory.slice(-4)
+      })
     });
     const data = await res.json();
     removeTyping(tid);
-    appendBotMessage(res.ok ? data.answer : 'Ошибка: ' + (data.detail || 'Неизвестная ошибка'));
+    const answer = res.ok ? data.answer : 'Ошибка: ' + (data.detail || 'Неизвестная ошибка');
+    appendBotMessage(answer);
+    if (res.ok) {
+      chatHistory.push(
+        { role: 'user', content: question },
+        { role: 'assistant', content: answer }
+      );
+      if (chatHistory.length > 4) chatHistory.splice(0, chatHistory.length - 4);
+    }
   } catch {
     removeTyping(tid);
     appendBotMessage('Не удалось подключиться к серверу. Попробуйте позже.');

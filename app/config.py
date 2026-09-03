@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     # === Groq LLM ===
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
-    GROQ_MAX_TOKENS: int = 1024
+    GROQ_MAX_TOKENS: int = 1400
     GROQ_TEMPERATURE: float = 0.2
 
     # === Ollama Embeddings ===
@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # === RAG Settings ===
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 100
+    RETRIEVAL_TOP_K: int = 12
+    MIN_RELEVANCE_SCORE: float = 0.18
+    MAX_CONTEXT_CHUNKS: int = 12
 
     # === App ===
     APP_TITLE: str = "Приёмная комиссия — ИИ-помощник"

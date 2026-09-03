@@ -47,7 +47,7 @@ http://localhost:8000
 
 ## Индексация Базы
 
-После запуска пересоберите индекс:
+При первом запуске приложение автоматически создаст индекс. Принудительная пересборка при необходимости:
 
 ```bash
 curl -X POST http://localhost:8000/sync \
@@ -61,17 +61,16 @@ curl -X POST http://localhost:8000/sync \
 curl http://localhost:8000/status
 ```
 
-Ожидаемо в базе:
+Ожидаемо после завершения индексации:
 
-- `docs_count`: `2`;
-- `chunks_count`: больше `0`.
+- `docs_count`: `10`;
+- `chunks_count`: около `270` (число может немного меняться после обновления данных).
 
 ## База Знаний
 
-В рабочей базе остались только официальные материалы KU:
+В рабочей базе находятся 10 очищенных тематических файлов: сведения об университете, контакты, факультеты, поступление, бакалавриат и цены, послевузовское обучение, студенческая поддержка, карьера, наука и международные программы. Карта файлов и правила дополнения находятся в `docs/README.md`.
 
-- `docs/00_ku_official_reference.txt` - подготовленная справка с ключевыми фактами: факультеты, программы, стоимость, контакты, стипендии, общежития.
-- `docs/ku_site_crawl.txt` - выгрузка 120 публичных страниц с `ku.edu.kz` и `apply.ku.edu.kz`.
+Сырой краул хранится локально в `data/raw_ku_site` и не индексируется и не загружается в GitHub.
 
 ## API
 
@@ -89,7 +88,7 @@ curl http://localhost:8000/status
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d "{\"question\":\"Сколько факультетов в университете?\",\"top_k\":5}"
+  -d "{\"question\":\"Сколько факультетов в университете?\",\"top_k\":8}"
 ```
 
 ## Структура
@@ -104,8 +103,12 @@ rag-abitur/
 │   ├── parser.py
 │   └── gdrive.py
 ├── docs/
-│   ├── 00_ku_official_reference.txt
-│   └── ku_site_crawl.txt
+│   ├── 01_ku_ob_universitete.txt
+│   ├── ...
+│   ├── 10_ku_mezhdunarodnye_programmy.txt
+│   └── README.md
+├── scripts/
+│   └── organize_ku_docs.py
 ├── static/
 │   └── index.html
 ├── tools/
@@ -131,13 +134,16 @@ docker compose exec app python cli.py ask "Какая стоимость обу�
 Скрипт выгрузки официальных страниц:
 
 ```bash
-docker compose exec app python tools/scrape_ku.py --max-pages 120 --output /data/docs/ku_site_crawl.txt
+docker compose exec app python tools/scrape_ku.py --max-pages 120 --output /data/raw_ku_site/ku_site_crawl.txt
 ```
 
-После обновления:
+Очистить и разложить новый краул по темам:
 
 ```bash
-docker compose exec app python cli.py sync --force
+docker compose exec app python scripts/organize_ku_docs.py --source /data/raw_ku_site --reference-dir /data/docs --output /data/docs
+docker compose restart app
 ```
+
+При обычном ручном дополнении TXT-файлов достаточно выполнить `docker compose restart app`: изменение будет найдено по хэшу, после чего индекс перестроится автоматически.
 
 Для паспорта проекта используйте название: `KU Assistant`.

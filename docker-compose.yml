@@ -46,6 +46,7 @@ services:
       - VECTORSTORE_PATH=/data/vectorstore
     volumes:
       - ./docs:/data/docs
+      - ./data/raw_ku_site:/data/raw_ku_site
       - rag_vectorstore:/data/vectorstore
     ports:
       - "8000:8000"

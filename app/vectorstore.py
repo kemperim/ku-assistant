@@ -9,7 +9,7 @@ import asyncio
 import aiohttp
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, asdict
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ class VectorStore:
         self.index = None
         self.chunks: List[VectorChunk] = []
         self.dimension: Optional[int] = None
+        self.source_hashes: Dict[str, str] = {}
 
         self._index_file = self.store_path / "faiss.index"
         self._meta_file = self.store_path / "metadata.json"
@@ -81,6 +82,7 @@ class VectorStore:
             meta = {
                 "chunks": [asdict(c) for c in self.chunks],
                 "dimension": self.dimension,
+                "source_hashes": self.source_hashes,
             }
             self._meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
             logger.info(f"VectorStore saved: {len(self.chunks)} chunks")
@@ -97,6 +99,7 @@ class VectorStore:
             meta = json.loads(self._meta_file.read_text(encoding="utf-8"))
             self.chunks = [VectorChunk(**c) for c in meta["chunks"]]
             self.dimension = meta.get("dimension")
+            self.source_hashes = meta.get("source_hashes", {})
             logger.info(f"VectorStore loaded: {len(self.chunks)} chunks")
             return True
         except Exception as e:
@@ -146,6 +149,7 @@ class VectorStore:
         self.index = None
         self.chunks = []
         self.dimension = None
+        self.source_hashes = {}
         if self._index_file.exists():
             self._index_file.unlink()
         if self._meta_file.exists():

@@ -4,7 +4,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from contextlib import asynccontextmanager
 
 from .rag_engine import RAGEngine
@@ -39,9 +40,15 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=6000)
+
+
 class QuestionRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k: int = 8
+    history: list[ChatMessage] = Field(default_factory=list, max_length=4)
 
 
 class QuestionResponse(BaseModel):
@@ -71,7 +78,12 @@ async def ask_question(req: QuestionRequest):
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     try:
-        result = await rag_engine.answer(req.question.strip(), top_k=req.top_k)
+        history = [message.model_dump() for message in req.history]
+        result = await rag_engine.answer(
+            req.question.strip(),
+            top_k=max(1, min(req.top_k, 12)),
+            history=history,
+        )
         return result
     except Exception as e:
         logger.error(f"Error answering question: {e}")
