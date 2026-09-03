@@ -1,4 +1,4 @@
-# RAG Abitur Agent
+# KU Assistant
 
 ИИ-помощник абитуриента для Северо-Казахстанского университета имени Манаша Козыбаева. Проект отвечает на вопросы по официальной базе знаний, собранной с `ku.edu.kz` и `apply.ku.edu.kz`.
 
@@ -110,16 +110,12 @@ rag-abitur/
 │   └── index.html
 ├── tools/
 │   └── scrape_ku.py
-├── nginx/
-│   └── nginx.conf
 ├── cli.py
 ├── Dockerfile
 ├── docker-compose.yml
 ├── deploy.sh
 ├── requirements.txt
-├── .env.example
-├── PROJECT_PASSPORT.md
-└── GITHUB_CHECKLIST.md
+└── .env.example
 ```
 
 ## CLI В Контейнере
@@ -144,6 +140,4 @@ docker compose exec app python tools/scrape_ku.py --max-pages 120 --output /data
 docker compose exec app python cli.py sync --force
 ```
 
-
-
-
+Для паспорта проекта используйте название: `KU Assistant`.

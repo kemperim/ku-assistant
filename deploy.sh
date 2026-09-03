@@ -61,7 +61,7 @@ docker compose up -d
 echo ""
 info "Ждём готовности Ollama (может занять 1-2 минуты при первом запуске)..."
 attempt=0
-until docker compose exec -T ollama curl -sf http://localhost:11434/api/tags &>/dev/null; do
+until docker compose exec -T ollama ollama list &>/dev/null; do
   attempt=$((attempt+1))
   if [ $attempt -ge 24 ]; then
     error "Ollama не запустилась за 2 минуты. Проверьте: docker compose logs ollama"
