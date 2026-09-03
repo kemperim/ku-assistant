@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+data
+secrets
+.env
+.env.*
+!.env.example
+README.md
+PROJECT_PASSPORT.md
+GITHUB_CHECKLIST.md

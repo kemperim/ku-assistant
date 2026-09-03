@@ -1,7 +1,9 @@
 .env
 *.pyc
 __pycache__/
+.venv/
 data/
+test_docs/
 secrets/
 *.egg-info/
 .DS_Store

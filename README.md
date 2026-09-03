@@ -1,255 +1,161 @@
-# 🎓 RAG Abitur Agent
+# RAG Abitur Agent
 
-ИИ-агент для ответов на вопросы абитуриентов на основе документов приёмной комиссии.
+ИИ-помощник абитуриента для Северо-Казахстанского университета имени Манаша Козыбаева. Проект отвечает на вопросы по официальной базе знаний, собранной с `ku.edu.kz` и `apply.ku.edu.kz`.
 
 ## Стек
 
 | Компонент | Технология |
-|-----------|-----------|
-| LLM | **Groq API** (llama-3.3-70b-versatile) |
-| Эмбеддинги | **Ollama** (nomic-embed-text) |
-| Векторный поиск | **FAISS** (cosine similarity) |
-| Документы | **Google Drive** (PDF / DOCX / TXT) |
-| Бэкенд | **FastAPI** |
-| Деплой | **Docker Compose** |
+|-----------|------------|
+| Backend | FastAPI |
+| LLM | Groq API |
+| Embeddings | Ollama `nomic-embed-text` |
+| Vector search | FAISS |
+| Documents | `docs/*.txt`, опционально Google Drive |
+| Deploy | Docker Compose |
 
----
+## Быстрый Запуск
 
-## ⚡ Быстрый старт (5 минут)
-
-### 1. Клонировать / распаковать проект
-
-```bash
-cd rag-abitur
-```
-
-### 2. Заполнить конфигурацию
+1. Создайте `.env`:
 
 ```bash
 cp .env.example .env
-nano .env    # или любой редактор
 ```
 
-Минимально нужно заполнить:
+2. Укажите в `.env` ключ Groq:
 
 ```env
-GROQ_API_KEY=gsk_...          # https://console.groq.com → API Keys
-GDRIVE_IDS=1ABC...,1XYZ...    # ID папок/файлов с Google Drive
+GROQ_API_KEY=gsk_...
 ```
 
-### 3. Запустить
+3. Запустите проект:
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+docker compose up --build
 ```
 
-Скрипт сам:
-- проверит Docker
-- соберёт образ
-- запустит все контейнеры
-- загрузит модель эмбеддингов в Ollama
-- дождётся готовности сервиса
+При первом запуске Docker Compose поднимет:
 
-### 4. Открыть интерфейс
+- `ollama` для эмбеддингов;
+- `ollama-init` для загрузки модели `nomic-embed-text`;
+- `app` с FastAPI-приложением.
 
-```
+4. Откройте интерфейс:
+
+```text
 http://localhost:8000
 ```
 
----
+## Индексация Базы
 
-## 🗂️ Структура проекта
+После запуска пересоберите индекс:
 
-```
-rag-abitur/
-├── app/
-│   ├── main.py          # FastAPI приложение, эндпоинты
-│   ├── config.py        # Настройки (читаются из .env)
-│   ├── rag_engine.py    # Оркестратор: sync → index → answer
-│   ├── vectorstore.py   # FAISS + Ollama embeddings
-│   ├── parser.py        # Парсинг PDF / DOCX / TXT
-│   └── gdrive.py        # Скачивание с Google Drive
-├── static/
-│   └── index.html       # Веб-интерфейс чата
-├── nginx/
-│   └── nginx.conf       # Reverse proxy (production)
-├── cli.py               # CLI для управления индексом
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example         # Шаблон конфигурации
-└── deploy.sh            # Скрипт быстрого деплоя
+```bash
+curl -X POST http://localhost:8000/sync \
+  -H "Content-Type: application/json" \
+  -d "{\"force\":true}"
 ```
 
----
+Проверить статус:
 
-## 🔑 Получение ключей
-
-### Groq API Key
-
-1. Зайдите на [console.groq.com](https://console.groq.com)
-2. Регистрация → **API Keys** → **Create API Key**
-3. Скопируйте ключ вида `gsk_...` в `.env`
-
-### Google Drive — публичные файлы
-
-Самый простой вариант — сделать папку/файл публичными:
-
-1. ПКМ на папку → **Открыть доступ** → **Все у кого есть ссылка**
-2. Скопируйте ссылку: `https://drive.google.com/drive/folders/`**`1ABC123XYZ`**
-3. Вставьте **только ID** (часть после `/folders/`) в `GDRIVE_IDS`
-
-Пример с несколькими ID:
-```env
-GDRIVE_IDS=1ABC123XYZ,1DEF456UVW,1GHI789RST
+```bash
+curl http://localhost:8000/status
 ```
 
-### Google Drive — приватные файлы (Service Account)
+Ожидаемо в базе:
 
-1. Откройте [Google Cloud Console](https://console.cloud.google.com)
-2. Создайте проект → включите **Google Drive API**
-3. **IAM → Service Accounts** → Create → скачайте JSON-ключ
-4. Поделитесь нужными папками Drive с email сервисного аккаунта (`...@....iam.gserviceaccount.com`)
-5. Укажите путь к JSON в `.env`:
+- `docs_count`: `2`;
+- `chunks_count`: больше `0`.
 
-```env
-GDRIVE_SERVICE_ACCOUNT_JSON=/app/secrets/service_account.json
-```
+## База Знаний
 
-И пробросьте файл в контейнер через `docker-compose.yml`:
-```yaml
-volumes:
-  - ./secrets:/app/secrets:ro
-```
+В рабочей базе остались только официальные материалы KU:
 
----
+- `docs/00_ku_official_reference.txt` - подготовленная справка с ключевыми фактами: факультеты, программы, стоимость, контакты, стипендии, общежития.
+- `docs/ku_site_crawl.txt` - выгрузка 120 публичных страниц с `ku.edu.kz` и `apply.ku.edu.kz`.
 
-## 📡 API эндпоинты
+Тестовые PDF удалены из рабочей базы и не используются при индексации.
+
+## API
 
 | Метод | URL | Описание |
 |-------|-----|----------|
 | `GET` | `/` | Веб-интерфейс |
 | `POST` | `/ask` | Задать вопрос |
-| `POST` | `/sync` | Синхронизировать документы с Drive |
-| `GET` | `/status` | Состояние индекса |
+| `POST` | `/sync` | Синхронизировать и проиндексировать документы |
+| `GET` | `/status` | Статус индекса |
 | `GET` | `/health` | Health check |
 | `GET` | `/docs` | Swagger UI |
 
-### Пример запроса `/ask`
+Пример:
 
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "Какие документы нужны для поступления?", "top_k": 5}'
+  -d "{\"question\":\"Сколько факультетов в университете?\",\"top_k\":5}"
 ```
 
-Ответ:
-```json
-{
-  "question": "Какие документы нужны для поступления?",
-  "answer": "Для поступления необходимо предоставить...",
-  "sources": [
-    {
-      "file": "pravila_postupleniya_2024.pdf",
-      "page": 3,
-      "score": 0.892,
-      "preview": "Список необходимых документов: 1. Аттестат..."
-    }
-  ]
-}
+## Структура
+
+```text
+rag-abitur/
+├── app/
+│   ├── main.py
+│   ├── config.py
+│   ├── rag_engine.py
+│   ├── vectorstore.py
+│   ├── parser.py
+│   └── gdrive.py
+├── docs/
+│   ├── 00_ku_official_reference.txt
+│   └── ku_site_crawl.txt
+├── static/
+│   └── index.html
+├── tools/
+│   └── scrape_ku.py
+├── nginx/
+│   └── nginx.conf
+├── cli.py
+├── Dockerfile
+├── docker-compose.yml
+├── deploy.sh
+├── requirements.txt
+├── .env.example
+├── PROJECT_PASSPORT.md
+└── GITHUB_CHECKLIST.md
 ```
 
----
-
-## 🛠️ CLI — управление индексом
-
-Внутри контейнера или локально (с установленными зависимостями):
+## CLI В Контейнере
 
 ```bash
-# Синхронизировать Drive и индексировать новые файлы
-docker compose exec app python cli.py sync
-
-# Полная переиндексация (если изменились документы)
-docker compose exec app python cli.py sync --force
-
-# Статус индекса
 docker compose exec app python cli.py status
-
-# Добавить локальный файл вручную
-docker compose exec app python cli.py add /path/to/document.pdf
-
-# Очистить индекс
-docker compose exec app python cli.py clear
-
-# Тестовый вопрос без браузера
-docker compose exec app python cli.py ask "Когда начинается приём документов?"
+docker compose exec app python cli.py sync --force
+docker compose exec app python cli.py ask "Какая стоимость обучения на Информационные системы?"
 ```
 
----
+## Обновление Данных KU
 
-## ⚙️ Все параметры `.env`
-
-```env
-# Groq LLM
-GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile   # или mixtral-8x7b-32768
-GROQ_MAX_TOKENS=1024
-GROQ_TEMPERATURE=0.2                  # 0.0 = детерминировано, 1.0 = творчески
-
-# Google Drive
-GDRIVE_IDS=                           # ID папок/файлов через запятую
-GDRIVE_SERVICE_ACCOUNT_JSON=          # путь или JSON для приватного доступа
-
-# Ollama
-OLLAMA_BASE_URL=http://ollama:11434
-OLLAMA_EMBED_MODEL=nomic-embed-text   # или mxbai-embed-large
-
-# RAG
-CHUNK_SIZE=800                        # символов в одном чанке
-CHUNK_OVERLAP=100                     # перекрытие между чанками
-
-# Приложение
-AUTO_SYNC_ON_START=true               # синхронизировать Drive при старте
-APP_TITLE=Приёмная комиссия — ИИ-помощник
-```
-
----
-
-## 🚀 Production деплой с Nginx
+Скрипт выгрузки официальных страниц:
 
 ```bash
-docker compose --profile production up -d
+docker compose exec app python tools/scrape_ku.py --max-pages 120 --output /data/docs/ku_site_crawl.txt
 ```
 
-Nginx будет доступен на порту 80 и проксировать запросы к приложению.
+После обновления:
 
-Для HTTPS добавьте Certbot или настройте SSL в `nginx/nginx.conf`.
-
----
-
-## 🐛 Частые проблемы
-
-**Ollama не запускается**
 ```bash
-docker compose logs ollama
-# Если нет GPU: убедитесь что секция deploy закомментирована в docker-compose.yml
+docker compose exec app python cli.py sync --force
 ```
 
-**Модель эмбеддингов не загружается**
-```bash
-docker compose exec ollama ollama pull nomic-embed-text
-```
+## GitHub
 
-**Groq возвращает ошибку 401**
-- Проверьте `GROQ_API_KEY` в `.env`
-- Убедитесь что ключ активен на console.groq.com
+Перед публикацией проверьте:
 
-**Документы не скачиваются с Drive**
-- Проверьте что папка/файл открыты ("Все у кого есть ссылка")
-- Убедитесь что ID в `GDRIVE_IDS` без пробелов
-- Попробуйте Service Account для приватных файлов
+- `.env` не попадает в Git;
+- `.venv/`, `data/`, `test_docs/` не попадают в Git;
+- реальные ключи API отсутствуют в коде и документации.
 
-**Индекс пуст после перезапуска**
-- Volumes сохраняются между запусками, но при `docker compose down -v` очищаются
-- Для надёжности сделайте: `docker compose down` (без `-v`)
+Подробный чеклист: `GITHUB_CHECKLIST.md`.
+
+## Паспорт
+
+Паспорт проекта для сдачи: `PROJECT_PASSPORT.md`.

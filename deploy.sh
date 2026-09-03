@@ -25,11 +25,11 @@ info "Docker найден: $(docker --version)"
 if [ ! -f .env ]; then
   if [ -f .env.example ]; then
     cp .env.example .env
-    warning ".env создан из .env.example — ОБЯЗАТЕЛЬНО заполните GROQ_API_KEY и GDRIVE_IDS!"
+    warning ".env создан из .env.example — ОБЯЗАТЕЛЬНО заполните GROQ_API_KEY!"
     echo ""
     echo "  Откройте файл .env и укажите:"
     echo "    GROQ_API_KEY=gsk_..."
-    echo "    GDRIVE_IDS=<ID папки или файла на Google Drive>"
+    echo "    GDRIVE_IDS=<ID папки или файла на Google Drive>  # опционально"
     echo ""
     read -p "  Нажмите Enter после редактирования .env, или Ctrl+C для отмены..." _
   else
@@ -46,7 +46,7 @@ if [ -z "$GROQ_API_KEY" ] || [ "$GROQ_API_KEY" = "gsk_ВАШ_КЛЮЧ_ЗДЕСЬ
 fi
 
 # 4. Создать нужные директории
-mkdir -p data/docs data/vectorstore nginx
+mkdir -p docs data/vectorstore nginx
 info "Директории созданы"
 
 # 5. Собрать образ
@@ -106,6 +106,6 @@ echo "    docker compose restart app        — перезапустить пр�
 echo "    docker compose down               — остановить всё"
 echo ""
 echo "  📂  Чтобы добавить документы вручную:"
-echo "      Скопируйте PDF/DOCX в docker volume или добавьте ID в .env → GDRIVE_IDS"
-echo "      Затем нажмите '⟳ Обновить базу' в интерфейсе."
+echo "      Скопируйте PDF/DOCX в ./docs или добавьте ID в .env → GDRIVE_IDS"
+echo "      Затем вызовите: curl -X POST http://localhost:8000/sync -H 'Content-Type: application/json' -d '{\"force\":true}'"
 echo ""

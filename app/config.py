@@ -1,6 +1,4 @@
-import os
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -11,7 +9,7 @@ class Settings(BaseSettings):
     GROQ_TEMPERATURE: float = 0.2
 
     # === Ollama Embeddings ===
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_BASE_URL: str = "http://ollama:11434"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
 
     # === Google Drive ===

@@ -1,8 +1,9 @@
 import os
 import logging
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 rag_engine: RAGEngine = None
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+STATIC_DIR = PROJECT_ROOT / "static"
 
 
 @asynccontextmanager
@@ -33,7 +36,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.mount("/static", StaticFiles(directory="/app/static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 class QuestionRequest(BaseModel):
@@ -53,7 +56,12 @@ class SyncRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return FileResponse("/app/static/index.html")
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
 
 
 @app.post("/ask", response_model=QuestionResponse)

@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app source
 COPY app/ ./app/
 COPY static/ ./static/
+COPY tools/ ./tools/
 
 # Data dirs (will be mounted as volumes)
 RUN mkdir -p /data/docs /data/vectorstore

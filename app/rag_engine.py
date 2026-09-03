@@ -124,10 +124,17 @@ class RAGEngine:
                     )
                     for c in chunks
                 ]
-                await self.vectorstore.add_chunks(vector_chunks)
-                self._docs_indexed[doc_path.name] = len(vector_chunks)
+                added_count = await self.vectorstore.add_chunks(vector_chunks)
+                if added_count == 0:
+                    logger.warning(f"No embeddings created for {doc_path.name}")
+                    result["errors"].append(
+                        f"{doc_path.name}: не удалось создать эмбеддинги. Проверьте настройки индекса и попробуйте sync --force."
+                    )
+                    continue
+
+                self._docs_indexed[doc_path.name] = added_count
                 result["indexed"] += 1
-                logger.info(f"Indexed {doc_path.name}: {len(vector_chunks)} chunks")
+                logger.info(f"Indexed {doc_path.name}: {added_count} chunks")
             except Exception as e:
                 logger.error(f"Error indexing {doc_path.name}: {e}")
                 result["errors"].append(f"{doc_path.name}: {str(e)}")
