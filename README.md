@@ -73,8 +73,6 @@ curl http://localhost:8000/status
 - `docs/00_ku_official_reference.txt` - подготовленная справка с ключевыми фактами: факультеты, программы, стоимость, контакты, стипендии, общежития.
 - `docs/ku_site_crawl.txt` - выгрузка 120 публичных страниц с `ku.edu.kz` и `apply.ku.edu.kz`.
 
-Тестовые PDF удалены из рабочей базы и не используются при индексации.
-
 ## API
 
 | Метод | URL | Описание |
@@ -146,16 +144,6 @@ docker compose exec app python tools/scrape_ku.py --max-pages 120 --output /data
 docker compose exec app python cli.py sync --force
 ```
 
-## GitHub
 
-Перед публикацией проверьте:
 
-- `.env` не попадает в Git;
-- `.venv/`, `data/`, `test_docs/` не попадают в Git;
-- реальные ключи API отсутствуют в коде и документации.
 
-Подробный чеклист: `GITHUB_CHECKLIST.md`.
-
-## Паспорт
-
-Паспорт проекта для сдачи: `PROJECT_PASSPORT.md`.
